@@ -81,45 +81,9 @@ struct dir_listing *create_dirlisting(const char *path)
         first = 0;
     }
 
-    return dirents;
-
-    // char *cmd = malloc(strlen(DIR_EXE) + strlen("-ld") + 2);
-    // sprintf(cmd, "%s -ld", DIR_EXE);
-
-    // FILE *f = popen(cmd, "r");
-    // assert(f);
-
-    // char *line = malloc(256);
-    // while (fgets(line, 256, f))
-    // {
-    //     // TODO: remove the last newline
-    //     vector_push_back(dirents->dirents, line);
-    // }
-
-    // pclose(f);
+    pclose(f);
     return dirents;
 }
-
-// struct dir_listing *all_files(void)
-// {
-//     struct dir_listing *dirents = malloc(sizeof(struct dir_listing));
-//     dirents->dirents = string_vector_create();
-// 
-//     char *cmd = malloc(strlen(DIR_EXE) + strlen("-lf") + 2);
-//     sprintf(cmd, "%s -lf", DIR_EXE);
-// 
-//     FILE *f = popen(cmd, "r");
-//     assert(f);
-// 
-//     char *line = malloc(256);
-//     while (fgets(line, 256, f))
-//     {
-//         // TODO: remove the last newline
-//         vector_push_back(dirents->dirents, line);
-//     }
-// 
-//     return dirents;
-// }
 
 void destroy_dirlisting(struct dir_listing **dirents)
 {
@@ -132,22 +96,6 @@ void destroy_dirlisting(struct dir_listing **dirents)
 
 static int is_directory(const char *path)
 {
-    // char *path_split = split(path);
-    // char *cmd = malloc(strlen(path_split) + strlen(DIR_EXE) + 2);
-    // sprintf(cmd, "%s %s", DIR_EXE, path_split);
-
-    // FILE *f = popen(cmd, "r");
-    // assert(f);
-
-    // char mode;
-    // assert(fread(&mode, 1, 1, f));
-
-    // free(path_split);
-    // free(cmd);
-    // pclose(f);
-
-    // return mode == 'D';
-
     if (strcmp(path, "") == 0)
         return 1;
 
@@ -166,22 +114,6 @@ static int is_directory(const char *path)
 
 static int is_file(const char *path)
 {
-    // char *path_split = split(path);
-    // char *cmd = malloc(strlen(path_split) + strlen(DIR_EXE) + 2);
-    // sprintf(cmd, "%s %s", DIR_EXE, path_split);
-
-    // FILE *f = popen(cmd, "r");
-    // assert(f);
-
-    // char mode;
-    // assert(fread(&mode, 1, 1, f));
-
-    // free(path_split);
-    // free(cmd);
-    // pclose(f);
-
-    // return mode == 'F';
-
     if (strcmp(path, "") == 0)
         return 0;
 
@@ -282,15 +214,6 @@ static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
     (void)fi;
     (void)flags;
 
-    // get rid of the leading '/'
-    // ++path;
-
-    // if (!isd)
-    //     return -ENOENT;
-    //
-    // if (strcmp(path, "/") != 0)
-    //     return -ENOENT;
-
     filler(buf, ".", NULL, 0, FUSE_FILL_DIR_PLUS);
     filler(buf, "..", NULL, 0, FUSE_FILL_DIR_PLUS);
 
@@ -300,8 +223,8 @@ static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
         dirent[strlen(dirent) - 1] = '\0';
         filler(buf, dirent, NULL, 0, FUSE_FILL_DIR_PLUS);
     });
-    destroy_dirlisting(&dir_listing);
 
+    destroy_dirlisting(&dir_listing);
     return 0;
 }
 
@@ -363,12 +286,6 @@ static void show_help(const char *progname)
 
 int main(int argc, char *argv[])
 {
-    // printf("%s is directory %d\n", "2025/Spring/CS/233", is_directory("2025/Spring/CS/233"));
-    // printf("%s is directory %d\n", "2025/Spring/CS", is_directory("2025/Spring/CS"));
-
-    // printf("%s is file %d\n", "2025/Spring/CS/233", is_file("2025/Spring/CS/233"));
-    // printf("%s is file %d\n", "2025/Spring/CS", is_file("2025/Spring/CS"));
-
     int ret;
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
