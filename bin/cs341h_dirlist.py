@@ -1,43 +1,5 @@
 #!/usr/bin/env python3
 
-directory = \
-{
-    "2025":
-    {
-        "Spring":
-        {
-            "CS":
-            {
-                "233": "Computer Architecture",
-                "341": "System Programming",
-                "425": "Distributed Systems",
-            },
-            "PHYS":
-            {
-                "211": "University Physics: Mechanics",
-                "212": "University Physics: Elec & Mag",
-            }
-        }
-    }
-}
-
-directories = \
-[
-    "2025",
-    "2025/Spring",
-    "2025/Spring/CS",
-    "2025/Spring/PHYS",
-]
-
-files = \
-[
-    "2025/Spring/CS/233",
-    "2025/Spring/CS/341",
-    "2025/Spring/CS/425",
-    "2025/Spring/PHYS/211",
-    "2025/Spring/PHYS/212",
-]
- 
 import sys
 
 def search(argc, argv):
@@ -84,6 +46,9 @@ def list_files(argc, argv):
 def main():
     argc = len(sys.argv)
     argv = sys.argv
+
+    if argc < 2:
+        return
 
     if argv[1] == "-s":
         search(argc, argv)

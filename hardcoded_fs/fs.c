@@ -12,7 +12,7 @@
 #include "vector.h"
 
 // this needs to be added to path :)
-#define DIR_EXE ("cs341h_dirlist.py")
+#define DIR_EXE ("api.py")
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 /*
@@ -73,13 +73,9 @@ struct dir_listing *create_dirlisting(const char *path)
     FILE *f = popen(cmd, "r");
     assert(f);
 
-    int first = 1;
     char line[256];
     while (fgets(line, sizeof(line), f))
-    {
-        vector_push_back(dirents->dirents, line + first);
-        first = 0;
-    }
+        vector_push_back(dirents->dirents, line);
 
     pclose(f);
     return dirents;
@@ -163,6 +159,7 @@ char *get_file_contents(const char *path)
 
     char *line = malloc(256);
     fgets(line, 256, f);
+    pclose(f);
 
     return line;
 }
@@ -256,7 +253,6 @@ static int hello_read(const char *path, char *buf, size_t size, off_t offset, st
     char contents[256] = {0};
     fread(contents, 1, 256, f);
     size_t bytes = strlen(contents);
-    offset += 1; // skip the initial F/D
 
     if (offset < (ssize_t)bytes)
     {
