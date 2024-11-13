@@ -1,3 +1,6 @@
 **/.cache
 **/course_explorer_fs
-hardcoded_fs/hardcoded_fs
+naive_fs/naive_fs
+naive_fs/.clang-format
+naive_fs/compile_commands.json
+

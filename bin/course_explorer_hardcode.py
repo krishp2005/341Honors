@@ -1,5 +1,43 @@
 #!/usr/bin/env python3
 
+directory = \
+{
+    "2025":
+    {
+        "Spring":
+        {
+            "CS":
+            {
+                "233": "Computer Architecture",
+                "341": "System Programming",
+                "425": "Distributed Systems",
+            },
+            "PHYS":
+            {
+                "211": "University Physics: Mechanics",
+                "212": "University Physics: Elec & Mag",
+            }
+        }
+    }
+}
+
+directories = \
+[
+    "2025",
+    "2025/Spring",
+    "2025/Spring/CS",
+    "2025/Spring/PHYS",
+]
+
+files = \
+[
+    "2025/Spring/CS/233",
+    "2025/Spring/CS/341",
+    "2025/Spring/CS/425",
+    "2025/Spring/PHYS/211",
+    "2025/Spring/PHYS/212",
+]
+
 import sys
 
 def search(argc, argv):
@@ -31,18 +69,10 @@ def is_file(argc, argv):
     else:
         print(0)
 
-def list_direc(argc, argv):
-    print('\n'.join(directories))
-
-def list_files(argc, argv):
-    print('\n'.join(files))
-
 # the first flag determines what to do
 # -s is search
 # -d is checking if directory exists
 # -f is checking if file exists
-# -lf is listing all files
-# -ld is listing all directories
 def main():
     argc = len(sys.argv)
     argv = sys.argv
@@ -56,10 +86,6 @@ def main():
         is_directory(argc, argv)
     if argv[1] == "-f":
         is_file(argc, argv)
-    if argv[1] == "-lf":
-        list_files(argc, argv)
-    if argv[1] == "-ld":
-        list_direc(argc, argv)
 
 if __name__ == "__main__":
     main()

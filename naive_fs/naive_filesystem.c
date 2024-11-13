@@ -11,9 +11,11 @@
 
 #include "vector.h"
 
-// this needs to be added to path :)
-#define DIR_EXE ("api.py")
 #define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
+// #define DIR_EXE ("course_explorer_hardcode.py")
+#define DIR_EXE ("cs341_course_explorer_api.py")
 
 /*
  * Command line options
@@ -147,7 +149,7 @@ size_t get_file_size(const char *path)
 
 char *get_file_contents(const char *path)
 {
-    if (!is_file(path))
+    if (!is_file(split(path)))
         return NULL;
 
     char *path_split = split(path);
@@ -183,8 +185,8 @@ static int hello_getattr(const char *path, struct stat *stbuf, struct fuse_file_
         return 0;
     }
 
-    int isd = is_directory(path + 1);
-    int isf = is_file(path + 1);
+    int isd = is_directory(split(path + 1));
+    int isf = is_file(split(path + 1));
 
     if (isd)
     {
@@ -227,7 +229,7 @@ static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
 
 static int hello_open(const char *path, struct fuse_file_info *fi)
 {
-    int isf = is_file(path + 1);
+    int isf = is_file(split(path + 1));
     if (!isf)
         return -ENOENT;
 

@@ -1,12 +1,19 @@
 # 341Honors
-FileSystems on RPI5
+Course explorer filesystem on RPI5.
+Implementing a virtual filesystem (course_explorer_fs) allowing for local
+browsing of UIUC course information.
 
-# Prebuild Instructions
-1. Install libfuse [https://github.com/libfuse/libfuse]
-2. add bin to PATH
+# Dependencies
+1. libfuse [https://github.com/libfuse/libfuse]
+2. xml parser (apt install python3-lxml)
+3. pkg-config (apt install build-essential) OR (apt install pkg-config)
+
+# Pre-Build Instructions
+make install
 
 # Build Instructions
-in the hardcoded_fs directory,
+cd naive_fs && make_mount
 
-make mount
-make unmount
+# Uninstallation
+cd naive_fs && make unmount
+make uninstall
