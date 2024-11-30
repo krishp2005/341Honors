@@ -8,6 +8,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "client.h"
+
+#define ROOT "/home/ianchen3/.local/share/cs341_fs/"
+
 void dirlist(char *path)
 {
     struct stat s;
@@ -38,10 +42,30 @@ void dirlist(char *path)
     closedir(dirp);
 }
 
+static int my_readdir(const char *path)
+{
+    struct dir_listing *dir_listing = create_dirlisting(path + 1);
+    for (size_t i = 0; i < vector_size(dir_listing->dirents); ++i)
+    {
+        char *dirent = vector_get(dir_listing->dirents, i);
+        dirent[strlen(dirent) - 1] = '\0';
+
+        char buf[FILENAME_MAX];
+        sprintf(buf, ROOT "%s%s", path + 1, dirent);
+        printf("%s\n", buf);
+        int fd = creat(buf, 0644);
+        close(fd);
+    }
+
+    destroy_dirlisting(&dir_listing);
+    return 0;
+}
+
 int main(void)
 {
-    char *path = "~/.local/share/cs341_fs/";
-    dirlist(path);
+    // char *path = "~/.local/share/cs341_fs/";
+    char *path = "/";
+    my_readdir(path);
 
     // int fd = open("mirror_fs/test", O_CREAT | O_TRUNC | O_RDWR, 0666);
     // assert(fd);

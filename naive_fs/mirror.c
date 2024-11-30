@@ -1,3 +1,5 @@
+// HEAVILY inspired by https://github.com/libfuse/libfuse/blob/master/example/passthrough.c
+
 #define FUSE_USE_VERSION 31
 
 #include <assert.h>
@@ -13,8 +15,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-// TAKEN FROM https://github.com/libfuse/libfuse/blob/master/example/passthrough.c
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
