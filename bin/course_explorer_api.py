@@ -2,7 +2,6 @@
 
 import bs4
 import requests
-import requests_cache
 import sys
 
 url = "http://courses.illinois.edu/cisapp/explorer/schedule"
@@ -14,16 +13,7 @@ paths = \
     "course",
     "label"
 ];
-query = \
-{
-    "calendarYear": None,
-    "term": None,
-    "subject": None,
-    "course": None,
-    "label": None,
-}
-
-requests_cache.install_cache(cache_name='~/.cache/course_explorer_fs/http_cache', backend='sqlite', expire_after=180)
+query = { path: None for path in paths }
 
 def construct_url(*, calendarYear=None, term=None, subject=None, course=None, **kwargs):
     path = '/'.join(str(v) for v in (calendarYear, term, subject, course) if v is not None)
@@ -57,12 +47,6 @@ def search(argc, argv):
         data = [entry["id"] for entry in data]
     return '\n'.join(data)
 
-def is_directory(argc, argv):
-    return int(argc < 6 and get_soup(argc, argv) is not None)
-
-def is_file(argc, argv):
-    return int(argc == 6 and get_soup(argc, argv) is not None)
-
 def main():
     argc = len(sys.argv)
     argv = sys.argv
@@ -70,13 +54,7 @@ def main():
     if argc < 2 or argc > 6:
         return
 
-    if argv[1] == "-s":
-        print(search(argc, argv))
-    if argv[1] == "-d":
-        print(is_directory(argc, argv))
-    if argv[1] == "-f":
-        print(is_file(argc, argv))
-
+    search(argc, argv)
 
 if __name__ == "__main__":
     main()

@@ -32,35 +32,22 @@
 // -- root file
 // -- metadata file
 
-#define METADATA_FILE "__metadata.dat"
-#define ROOT "/.local/share/cs341_fs/"
-
 static char *HOME = NULL;
-#define NEWPATH(path, newpath)                             \
-    char _newpath[FILENAME_MAX + 1];                       \
-    sprintf(_newpath, "%s%s%s", HOME, ROOT, path);         \
-    if (strcmp(path, ".") == 0 || strcmp(path, "..") == 0) \
-        sprintf(_newpath, "%s%s", HOME, ROOT);             \
-    char *(newpath) = _newpath;
 
-// the metadata file is just the bytes (serialization??) of the following struct
-// stored in every file
-struct metadata 
+// every directory has a metafile "dir/__metadata.dat" that stores the contents
+// the format is then going to be
+// 1) the number of files / directories inside
+// 2) the time (double) that it was last fetched -- consider using modify time of file
+// 3) an array of metadata items -- with pointer to where the variable length starts
+// 4) the variable length file contents
+struct metadata
 {
-    double time;
-    int file;
-    int directory;
+    char filepath[FILENAME_MAX];
+    size_t contents_size;
+    size_t contents_offset;
+    int is_directory;
+    int is_file;
 };
-
-static double get_time(void)
-{
-    struct timespec res;
-    clock_gettime(CLOCK_REALTIME, &res);
-    return ((double)res.tv_sec * 1e9 + (double)res.tv_nsec) / 1e9;
-}
-
-// the time (seconds) since the file is seen as stale
-#define EXPR_TIME (15)
 
 // =============================================================================
 // PUBLIC INTERFACE SYSCALLS  ==================================================
@@ -71,56 +58,70 @@ static void *my_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
     (void)conn;
     (void)cfg;
 
-    // create the metadata file
-    // NEWPATH(METADATA_FILE, path);
-    // int fd = open(path, O_TRUNC | O_CREAT | O_RDWR, 0666);
-    // metadata = mmap(NULL, NUM_INODES * sizeof(double), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
     return NULL;
 }
+
+#define goclean(a) \
+    retval = (a);  \
+    goto cleanup;
 
 static int my_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi)
 {
     (void)fi;
-
     memset(stbuf, 0, sizeof(struct stat));
-    if (strcmp(path, "/") == 0)
+
+    // map relative paths to absolute
+    int fd, retval;
+    size_t size;
+    char *data = map_metadata(HOME, path, &size, &fd);
+
+    if (data == NULL)
+    {
+        close(fd);
+        return -errno;
+    }
+
+    char *mypath = normalize_path(path);
+    if (strcmp(mypath, "/") == 0)
     {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-        return 0;
+        goclean(0);
     }
 
-    // TODO: merge these three calls into one bigger one
-
-    if (is_directory(split(path + 1)))
+    size_t num_items, item;
+    memcpy(&num_items, data, sizeof(size_t));
+    struct metadata *metas = (struct metadata *)(data + sizeof(size_t) + sizeof(double));
+    for (item = 0; item < num_items; ++item)
     {
-        stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_nlink = 2;
-        return 0;
+        struct metadata *meta = &metas[item];
+        if (strcmp(meta->filepath, mypath) == 0)
+        {
+            if (meta->is_directory)
+            {
+                stbuf->st_mode = S_IFDIR | 0755;
+                stbuf->st_nlink = 2;
+            }
+            else if (meta->is_file)
+            {
+                stbuf->st_mode = S_IFREG | 0644;
+                stbuf->st_nlink = 1;
+                stbuf->st_size = (off_t)meta->contents_size;
+            }
+            else
+                break;
+
+            goclean(0);
+        }
     }
 
-    if (is_file(split(path + 1)))
-    {
-        stbuf->st_mode = S_IFREG | 0444;
-        stbuf->st_nlink = 1;
-        stbuf->st_size = (off_t)get_file_size(path);
-        return 0;
-    }
+    goclean(-ENOENT);
 
-    return -ENOENT;
-}
-
-static int my_open(const char *path, struct fuse_file_info *fi)
-{
-    int isf = is_file(split(path + 1));
-    if (!isf)
-        return -ENOENT;
-
-    if ((fi->flags & O_ACCMODE) != O_RDONLY)
-        return -EACCES;
-
-    return 0;
+cleanup:
+    close(fd);
+    munmap(data, size);
+    free(mypath);
+    return retval;
 }
 
 static int my_readdir(
@@ -138,31 +139,39 @@ static int my_readdir(
     filler(buf, ".", NULL, 0, FUSE_FILL_DIR_PLUS);
     filler(buf, "..", NULL, 0, FUSE_FILL_DIR_PLUS);
 
-    struct dir_listing *dir_listing = create_dirlisting(path + 1);
-    VECTOR_FOR_EACH(dir_listing->dirents, _dirent, {
-        char *dirent = _dirent;
-        dirent[strlen(dirent) - 1] = '\0';
-        filler(buf, dirent, NULL, 0, FUSE_FILL_DIR_PLUS);
+    int fd;
+    size_t size;
+    char *data = map_metadata(HOME, path, &size, &fd);
 
-        char buf[FILENAME_MAX];
-        sprintf(buf, "%s %s", split(path + 1), dirent);
-        int isd = is_directory(buf);
-        int isf = is_file(buf);
+    if (data == NULL)
+    {
+        close(fd);
+        return -errno;
+    }
 
-        sprintf(buf, "%s%s%s/%s", HOME, ROOT, path + 1, dirent);
-        if (isf)
-        {
-            int fd = open(buf, O_CREAT | O_TRUNC | O_RDWR, 0644);
-            close(fd);
-        }
-        else if (isd)
-        {
-            int fd = mkdir(buf, 0755);
-            close(fd);
-        }
-    });
+    size_t num_items, item;
+    memcpy(&num_items, data, sizeof(size_t));
 
-    destroy_dirlisting(&dir_listing);
+    struct metadata *metas = (struct metadata *)(data + sizeof(size_t) + sizeof(double));
+    for (item = 0; item < num_items; ++item)
+        filler(buf, metas[item].filepath, NULL, 0, FUSE_FILL_DIR_PLUS);
+
+    close(fd);
+    munmap(data, size);
+    return 0;
+}
+
+static int my_open(const char *path, struct fuse_file_info *fi)
+{
+    struct stat stbuf;
+    my_getattr(path, &stbuf, fi);
+
+    if (!S_ISREG(stbuf.st_mode))
+        return -ENOENT;
+
+    if ((fi->flags & O_ACCMODE) != O_RDONLY)
+        return -EACCES;
+
     return 0;
 }
 
@@ -173,24 +182,8 @@ static int my_read(
     off_t offset,
     struct fuse_file_info *fi)
 {
-    int fd;
-    ssize_t res;
-
-    if (fi == NULL)
-        fd = open(path, O_RDONLY);
-    else
-        fd = (int)fi->fh;
-
-    if (fd == -1)
-        return -errno;
-
-    res = pread(fd, buf, size, offset);
-    if (res == -1)
-        res = -errno;
-
-    if (fi == NULL)
-        close(fd);
-    return (int)res;
+    // TODO:
+    return 0;
 }
 
 static const struct fuse_operations my_oper = {
@@ -249,6 +242,3 @@ int main(int argc, char *argv[])
     fuse_opt_free_args(&args);
     return ret;
 }
-
-// TODO: better implement stat to only need one call (instead of everything)
-// add the metadata
