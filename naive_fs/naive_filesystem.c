@@ -43,13 +43,14 @@ static char *HOME = NULL;
         sprintf(_newpath, "%s%s", HOME, ROOT);             \
     char *(newpath) = _newpath;
 
-// the metadata file is represented as an array of NUM_INODES doubles
-// double represents the unix time (in seconds since 1970)
-// 0 (default) means uninitialized
-// this is the time since the information was last successfully fetched
-// note: this is different from access time
-// potentially, this could be the utimens call
-#define NUM_INODES (1024L * 1024L)
+// the metadata file is just the bytes (serialization??) of the following struct
+// stored in every file
+struct metadata 
+{
+    double time;
+    int file;
+    int directory;
+};
 
 static double get_time(void)
 {
@@ -60,70 +61,6 @@ static double get_time(void)
 
 // the time (seconds) since the file is seen as stale
 #define EXPR_TIME (15)
-
-// static pointer to mmaped file
-static char *metadata;
-
-// =============================================================================
-// PRIVATE INTERFACE SYSCALLS  =================================================
-// =============================================================================
-
-// static int my_mknod(const char *path, mode_t mode, dev_t rdev)
-// {
-//     int res;
-//     int dirfd = AT_FDCWD;
-//     char *link = NULL;
-//
-//     NEWPATH(path, newpath);
-//     if (S_ISREG(mode))
-//     {
-//         res = openat(dirfd, newpath, O_CREAT | O_EXCL | O_WRONLY, mode);
-//         if (res >= 0)
-//             res = close(res);
-//     }
-//     else if (S_ISDIR(mode))
-//         res = mkdirat(dirfd, newpath, mode);
-//     else if (S_ISLNK(mode) && link != NULL)
-//         res = symlinkat(link, dirfd, newpath);
-//     else if (S_ISFIFO(mode))
-//         res = mkfifoat(dirfd, newpath, mode);
-//     else
-//         res = mknodat(dirfd, newpath, mode, rdev);
-//
-//     if (res == -1)
-//         return -errno;
-//     return res;
-// }
-//
-// int my_mkdir(const char *path, mode_t mode)
-// {
-//     NEWPATH(path, newpath);
-//
-//     int res = mkdir(newpath, mode);
-//     return (res == -1) ? -errno : res;
-// }
-//
-// int my_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
-// {
-//     int fd;
-//     int res;
-//
-//     if (fi == NULL)
-//         fd = open(path, O_WRONLY);
-//     else
-//         fd = (int)fi->fh;
-//
-//     if (fd == -1)
-//         return -errno;
-//
-//     res = (int)pwrite(fd, buf, size, offset);
-//     if (res == -1)
-//         res = -errno;
-//
-//     if (fi == NULL)
-//         close(fd);
-//     return res;
-// }
 
 // =============================================================================
 // PUBLIC INTERFACE SYSCALLS  ==================================================
@@ -212,8 +149,6 @@ static int my_readdir(
         int isd = is_directory(buf);
         int isf = is_file(buf);
 
-        // TODO: use myopen
-
         sprintf(buf, "%s%s%s/%s", HOME, ROOT, path + 1, dirent);
         if (isf)
         {
@@ -264,12 +199,6 @@ static const struct fuse_operations my_oper = {
     .open = my_open,       // open
     .readdir = my_readdir, // readdir
     .read = my_read,       // read
-    // .mknod = my_mknod,     // create inode
-    // .write = my_write,     // write
-    // .utimens = my_utimens, // modify time
-    // .mkdir = my_mkdir,     // mkdir
-    // .unlink = my_unlink,   // rm
-    // .rmdir = my_rmdir,     // rmdir
 };
 
 // =============================================================================
@@ -320,3 +249,6 @@ int main(int argc, char *argv[])
     fuse_opt_free_args(&args);
     return ret;
 }
+
+// TODO: better implement stat to only need one call (instead of everything)
+// add the metadata
