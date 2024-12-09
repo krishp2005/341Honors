@@ -37,6 +37,8 @@ char *get_parent_dir(const char *path)
     return p;
 }
 
+// TOOD: make these take flags for both read and write
+
 /**
  * returns the fd referring to the metadata for a given
  * normalized path or dir
@@ -45,7 +47,7 @@ int open_metadata_file(const char *HOME, const char *dir)
 {
     char buf[FILENAME_MAX] = {0};
     sprintf(buf, "%s%s%s" METADATA_FILE, HOME, ROOT, dir);
-    return open(buf, O_CREAT | O_RDONLY, 0644);
+    return open(buf, O_CREAT | O_RDWR, 0644);
 }
 
 char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
@@ -60,7 +62,7 @@ char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
     fstat(*fd, &mystbuf);
     *length = mystbuf.st_size;
 
-    char *data = mmap(NULL, *length, PROT_READ, MAP_PRIVATE, *fd, 0);
+    char *data = mmap(NULL, *length, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
     free(mypath);
     free(parent);
 
