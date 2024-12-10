@@ -7,7 +7,7 @@ INCLUDES=includes
 
 EXE=naive
 SRC=naive_filesystem.c client.c
-FILESYSTEM=naive_filesystem
+FILESYSTEM=naive_filesystem_fs
 BACKING_DIR=~/.local/share/cs341_fs
 
 .PHONY: build mount unmount

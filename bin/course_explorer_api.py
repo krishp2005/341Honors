@@ -4,6 +4,7 @@ import bs4
 import requests
 import sys
 import struct
+import time
 
 url = "http://courses.illinois.edu/cisapp/explorer/schedule"
 paths = \
@@ -31,7 +32,7 @@ def get(**kwargs):
 
 def get_soup(argc, argv):
     for i in range(2, argc):
-        query[paths[i - 2]] = argv[i]
+        query[paths[i - 2]] = argv[i - 1]
     return get(**query)
 
 def search(argc, argv):
@@ -62,19 +63,19 @@ def print_data(data: list):
     #     int is_file;
     # };
 
-    byte_data = []
+    byte_data = [None] * len(data)
     is_file = isinstance(data[0], tuple)
     is_dir = isinstance(data[0], str)
 
     header = struct.pack('Nd', len(data), time.time())
     if is_file:
-        contents_offset = 16 + (4096 + 24) * len(data) + 8
+        contents_offset = 16 + (4096 + 24) * len(data)
         for i, (d, t) in enumerate(data):
             m = struct.pack('4096sNNii', bytes(d, "ascii"), len(t), contents_offset, is_dir, is_file)
             byte_data[i] = m
             contents_offset += len(t) + 1
     else:
-        for d in enumerate(data):
+        for i, d in enumerate(data):
             m = struct.pack('4096sNNii', bytes(d, "ascii"), 0, 0, is_dir, is_file)
             byte_data[i] = m
 
@@ -90,6 +91,8 @@ def main():
         return
 
     data = search(argc, argv)
+    if data is None:
+        return
     print_data(data)
 
 if __name__ == "__main__":

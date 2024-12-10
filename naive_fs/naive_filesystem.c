@@ -89,13 +89,15 @@ static int my_getattr(const char *path, struct stat *stbuf, struct fuse_file_inf
         goclean(0);
     }
 
+    char *bottom = strrchr(mypath, '/') + 1;
+
     size_t num_items, item;
     memcpy(&num_items, data, sizeof(size_t));
     struct metadata *metas = (struct metadata *)(data + sizeof(size_t) + sizeof(double));
     for (item = 0; item < num_items; ++item)
     {
         struct metadata *meta = &metas[item];
-        if (strcmp(meta->filepath, mypath) == 0)
+        if (strcmp(meta->filepath, bottom) == 0)
         {
             if (meta->is_directory)
             {

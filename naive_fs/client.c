@@ -47,6 +47,13 @@ int open_metadata_file(const char *HOME, const char *dir)
 {
     char buf[FILENAME_MAX] = {0};
     sprintf(buf, "%s%s%s" METADATA_FILE, HOME, ROOT, dir);
+
+    char *parent = get_parent_dir(buf);
+    char command[FILENAME_MAX];
+    snprintf(command, sizeof(command), "/bin/env mkdir -p %s", parent);
+    system(command);
+    free(parent);
+
     return open(buf, O_CREAT | O_RDWR, 0644);
 }
 
@@ -55,8 +62,17 @@ char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
     char *mypath = normalize_path(path);
     char *parent = get_parent_dir(mypath);
 
-    *fd = open_metadata_file(HOME, mypath);
-    fill_directory_contents(parent, *fd);
+    if (*parent == '/')
+    {
+        char *p = strdup(parent + 1);
+        strcat(p, "/");
+        *fd = open_metadata_file(HOME, p);
+        free(p);
+    }
+    else
+        *fd = open_metadata_file(HOME, parent);
+
+    fill_directory_contents(mypath + 1, *fd);
 
     struct stat mystbuf;
     fstat(*fd, &mystbuf);
@@ -105,24 +121,35 @@ int fill_directory_contents(const char *path, int fd)
 {
     lseek(fd, sizeof(size_t), SEEK_SET);
     double buf;
-    read(fd, &buf, sizeof(double));
-    if (get_time() - buf <= EXPR_TIME)
+    if (read(fd, &buf, sizeof(double)) == sizeof(double) && get_time() - buf <= EXPR_TIME)
         return 0;
 
+    lseek(fd, 0, SEEK_SET);
+    ftruncate(fd, 0);
+
     fflush(stdout);
-    pid_t child = fork();
+    int child = fork();
     if (child == -1)
-        return errno;
+        return -errno;
 
     if (child == 0)
     {
-        // we are the child
-        lseek(fd, 0, SEEK_SET);
-        dup2(fd, stdout);
-        execlp(DIR_EXE, DIR_EXE, path, NULL);
+        char **argv = (char **)calloc(11, sizeof(char *));
+        char *iter = strdup(path);
+        argv[0] = DIR_EXE;
+        argv[1] = iter;
+        int idx = 1;
+        while (strchr(iter, '/') != NULL)
+        {
+            iter = strchr(iter, '/');
+            *iter++ = '\0';
+            argv[++idx] = iter;
+        }
+
+        dup2(fd, STDOUT_FILENO);
+        execvp(DIR_EXE, argv);
         exit(1);
     }
 
-    waitpid(child, NULL, 0);
     return 0;
 }
