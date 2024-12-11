@@ -213,7 +213,7 @@ static int my_read(
         {
             char *contents = data + meta->contents_offset + offset;
             memcpy(buf, contents, size);
-            goclean(0);
+            goclean(size);
         }
     }
     goclean(-ENOENT);

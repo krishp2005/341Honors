@@ -225,60 +225,85 @@ cleanup:
     return retval;
 }
 
-static int my_readdir(const char *path)
+static int my_open(const char *path)
 {
-    int fd;
-    size_t size;
+    struct stat stbuf;
+    my_getattr(path, &stbuf);
+
+    if (!S_ISREG(stbuf.st_mode))
+        return -ENOENT;
+
+    return 0;
+}
+
+static int my_read(
+    const char *path,
+    char *buf,
+    size_t size,
+    off_t offset)
+{
+    int res = my_open(path);
+    if (res != 0)
+        return res;
+
     char *mypath = normalize_path(path);
-    char *data;
-    if (strlen(mypath) == 1)
-        data = map_metadata(HOME, "", &size, &fd);
-    else
-        data = map_metadata(HOME, mypath, &size, &fd);
+    char *parent = get_parent_dir(mypath);
+
+    // map relative paths to absolute
+    int fd, retval;
+    size_t length;
+    char *data = map_metadata(HOME, parent, &length, &fd);
 
     if (data == NULL)
         return -errno;
+
+    char *bottom = strrchr(mypath, '/') + 1;
 
     size_t num_items, item;
     memcpy(&num_items, data, sizeof(size_t));
 
     struct metadata *metas = (struct metadata *)(data + sizeof(size_t) + sizeof(double));
     for (item = 0; item < num_items; ++item)
-        printf("%s\n", metas[item].filepath);
+    {
+        struct metadata *meta = metas + item;
+        if (strcmp(meta->filepath, bottom) == 0)
+        {
+            char *contents = data + meta->contents_offset + offset;
+            memcpy(buf, contents, size);
+            goclean(size);
+        }
+    }
+    goclean(-ENOENT);
 
+cleanup:
     close(fd);
-    munmap(data, size);
-    return 0;
+    munmap(data, length);
+    return retval;
 }
 
 int main(int argc, char **argv)
 {
-    // char *path = "~/.local/share/cs341_fs/";
-    // char *path = "/2024";
-    // size_t length;
-    // int fd;
-    // char *meta = map_metadata(HOME, path, &length, &fd);
+    char *path = "/2024/Fall/CS/173";
+    
+    struct stat stbuf;
+    int res = my_getattr(path, &stbuf);
 
-    // size_t num_items;
-    // double time;
-    // memcpy(&num_items, meta, sizeof(num_items));
-    // memcpy(&time, meta + sizeof(num_items), sizeof(time));
-
-    // munmap(meta, length);
-    // close(fd);
-
-    // struct stat stbuf;
-    // int res = my_getattr("/2024", &stbuf);
-    // printf("stat returned %d\n", res);
-
-    if (argc == 1)
+    if (res != 0)
     {
-        printf("run with args\n");
-        exit(0);
+        perror("getattr");
+        exit(1);
     }
 
-    int res = my_readdir(argv[1]);
-    printf("readdir exited with res %d\n", res);
+    char *buf = calloc(stbuf.st_size + 1, 1);
+    res = my_read(path, buf, stbuf.st_size, 0);
+
+    if (res < 0)
+    {
+        perror("res");
+        exit(1);
+    }
+
+    printf("%s\n", buf);
 
     // int fd = open("mirror_fs/test", O_CREAT | O_TRUNC | O_RDWR, 0666);
     // assert(fd);
