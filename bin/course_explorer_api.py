@@ -13,7 +13,6 @@ paths = \
     "term",
     "subject",
     "course",
-    "label"
 ];
 query = { path: None for path in paths }
 
@@ -31,8 +30,8 @@ def get(**kwargs):
     return bs4.BeautifulSoup(r.content.decode("utf-8"), "lxml-xml")
 
 def get_soup(argc, argv):
-    for i in range(2, argc):
-        query[paths[i - 2]] = argv[i - 1]
+    for i in range(1, argc):
+        query[paths[i - 1]] = argv[i]
     return get(**query)
 
 def search(argc, argv):
@@ -40,10 +39,10 @@ def search(argc, argv):
     if soup is None:
         return
 
-    data = soup.find_all(paths[argc - 2])
-    if argc == 3:
+    data = soup.find_all(paths[argc - 1])
+    if argc == 2:
         return [entry.text.split(' ')[0] for entry in data]
-    elif argc == 6:
+    elif argc == 4:
         return [(entry["id"], entry.text) for entry in data]
     else:
         return [entry["id"] for entry in data]
@@ -69,10 +68,12 @@ def print_data(data: list):
 
     header = struct.pack('Nd', len(data), time.time())
     if is_file:
+        byte_data = [None] * (2 * len(data))
         contents_offset = 16 + (4096 + 24) * len(data)
         for i, (d, t) in enumerate(data):
             m = struct.pack('4096sNNii', bytes(d, "ascii"), len(t), contents_offset, is_dir, is_file)
             byte_data[i] = m
+            byte_data[i + len(data)] = struct.pack(f"{len(t)}sx", bytes(t, "ascii"))
             contents_offset += len(t) + 1
     else:
         for i, d in enumerate(data):
@@ -87,7 +88,7 @@ def main():
     argc = len(sys.argv)
     argv = sys.argv
 
-    if argc < 2 or argc > 6:
+    if argc < 1 or argc > 4:
         return
 
     data = search(argc, argv)

@@ -9,6 +9,8 @@
 // replaces all '/' in a path with ' '
 char *split(const char *path);
 
+char *get_parent_dir(const char *path);
+
 // replaces with absolute path
 char *normalize_path(const char *path);
 

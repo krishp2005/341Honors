@@ -70,10 +70,13 @@ static int my_getattr(const char *path, struct stat *stbuf, struct fuse_file_inf
     (void)fi;
     memset(stbuf, 0, sizeof(struct stat));
 
+    char *mypath = normalize_path(path);
+    char *parent = get_parent_dir(mypath);
+
     // map relative paths to absolute
     int fd, retval;
     size_t size;
-    char *data = map_metadata(HOME, path, &size, &fd);
+    char *data = map_metadata(HOME, parent, &size, &fd);
 
     if (data == NULL)
     {
@@ -81,7 +84,6 @@ static int my_getattr(const char *path, struct stat *stbuf, struct fuse_file_inf
         return -errno;
     }
 
-    char *mypath = normalize_path(path);
     if (strcmp(mypath, "/") == 0)
     {
         stbuf->st_mode = S_IFDIR | 0755;

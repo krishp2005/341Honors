@@ -56,28 +56,23 @@ char *normalize_path(const char *path)
 
 char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
 {
-    char *mypath = normalize_path(path);
-    char *parent = get_parent_dir(mypath);
-
-    if (*parent == '/')
+    if (*path == '/')
     {
-        char *p = strdup(parent + 1);
+        char *p = strdup(path + 1);
         strcat(p, "/");
         *fd = open_metadata_file(HOME, p);
         free(p);
     }
     else
-        *fd = open_metadata_file(HOME, parent);
+        *fd = open_metadata_file(HOME, path);
 
-    fill_directory_contents(mypath + 1, *fd);
+    fill_directory_contents(path + 1, *fd);
 
     struct stat mystbuf;
     fstat(*fd, &mystbuf);
     *length = mystbuf.st_size;
 
     char *data = mmap(NULL, *length, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
-    free(mypath);
-    free(parent);
 
     if (data == MAP_FAILED)
     {
@@ -134,13 +129,15 @@ int fill_directory_contents(const char *path, int fd)
         char **argv = (char **)calloc(11, sizeof(char *));
         char *iter = strdup(path);
         argv[0] = DIR_EXE;
-        argv[1] = iter;
-        int idx = 1;
+
+        int idx = 1 + (strlen(iter) > 0);
+        if (idx > 1)
+            argv[idx - 1] = iter;
         while (strchr(iter, '/') != NULL)
         {
             iter = strchr(iter, '/');
             *iter++ = '\0';
-            argv[++idx] = iter;
+            argv[idx++] = iter;
         }
 
         dup2(fd, STDOUT_FILENO);
@@ -169,10 +166,13 @@ static int my_getattr(const char *path, struct stat *stbuf)
 {
     memset(stbuf, 0, sizeof(struct stat));
 
+    char *mypath = normalize_path(path);
+    char *parent = get_parent_dir(mypath);
+
     // map relative paths to absolute
     int fd, retval;
     size_t size;
-    char *data = map_metadata(HOME, path, &size, &fd);
+    char *data = map_metadata(HOME, parent, &size, &fd);
 
     if (data == NULL)
     {
@@ -180,7 +180,6 @@ static int my_getattr(const char *path, struct stat *stbuf)
         return -errno;
     }
 
-    char *mypath = normalize_path(path);
     if (strcmp(mypath, "/") == 0)
     {
         stbuf->st_mode = S_IFDIR | 0755;
@@ -249,7 +248,7 @@ static int my_readdir(const char *path)
     return 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     // char *path = "~/.local/share/cs341_fs/";
     // char *path = "/2024";
@@ -265,11 +264,18 @@ int main(void)
     // munmap(meta, length);
     // close(fd);
 
-    struct stat stbuf;
-    int res = my_getattr("/2024", &stbuf);
-    printf("stat returned %d\n", res);
+    // struct stat stbuf;
+    // int res = my_getattr("/2024", &stbuf);
+    // printf("stat returned %d\n", res);
 
-    my_readdir("/2024");
+    if (argc == 1)
+    {
+        printf("run with args\n");
+        exit(0);
+    }
+
+    int res = my_readdir(argv[1]);
+    printf("readdir exited with res %d\n", res);
 
     // int fd = open("mirror_fs/test", O_CREAT | O_TRUNC | O_RDWR, 0666);
     // assert(fd);

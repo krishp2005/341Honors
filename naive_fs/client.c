@@ -59,28 +59,23 @@ int open_metadata_file(const char *HOME, const char *dir)
 
 char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
 {
-    char *mypath = normalize_path(path);
-    char *parent = get_parent_dir(mypath);
-
-    if (*parent == '/')
+    if (*path == '/')
     {
-        char *p = strdup(parent + 1);
+        char *p = strdup(path + 1);
         strcat(p, "/");
         *fd = open_metadata_file(HOME, p);
         free(p);
     }
     else
-        *fd = open_metadata_file(HOME, parent);
+        *fd = open_metadata_file(HOME, path);
 
-    fill_directory_contents(mypath + 1, *fd);
+    fill_directory_contents(path + 1, *fd);
 
     struct stat mystbuf;
     fstat(*fd, &mystbuf);
     *length = mystbuf.st_size;
 
     char *data = mmap(NULL, *length, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
-    free(mypath);
-    free(parent);
 
     if (data == MAP_FAILED)
     {
