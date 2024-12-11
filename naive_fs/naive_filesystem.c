@@ -79,10 +79,7 @@ static int my_getattr(const char *path, struct stat *stbuf, struct fuse_file_inf
     char *data = map_metadata(HOME, parent, &size, &fd);
 
     if (data == NULL)
-    {
-        close(fd);
         return -errno;
-    }
 
     if (strcmp(mypath, "/") == 0)
     {
@@ -145,13 +142,15 @@ static int my_readdir(
 
     int fd;
     size_t size;
-    char *data = map_metadata(HOME, path, &size, &fd);
+    char *mypath = normalize_path(path);
+    char *data;
+    if (strlen(mypath) == 1)
+        data = map_metadata(HOME, "", &size, &fd);
+    else
+        data = map_metadata(HOME, mypath, &size, &fd);
 
     if (data == NULL)
-    {
-        close(fd);
         return -errno;
-    }
 
     size_t num_items, item;
     memcpy(&num_items, data, sizeof(size_t));
@@ -186,8 +185,43 @@ static int my_read(
     off_t offset,
     struct fuse_file_info *fi)
 {
-    // TODO:
-    return 0;
+    int res = my_open(path, fi);
+    if (res != 0)
+        return res;
+
+    char *mypath = normalize_path(path);
+    char *parent = get_parent_dir(mypath);
+
+    // map relative paths to absolute
+    int fd, retval;
+    size_t length;
+    char *data = map_metadata(HOME, parent, &length, &fd);
+
+    if (data == NULL)
+        return -errno;
+
+    char *bottom = strrchr(mypath, '/') + 1;
+
+    size_t num_items, item;
+    memcpy(&num_items, data, sizeof(size_t));
+
+    struct metadata *metas = (struct metadata *)(data + sizeof(size_t) + sizeof(double));
+    for (item = 0; item < num_items; ++item)
+    {
+        struct metadata *meta = metas + item;
+        if (strcmp(meta->filepath, bottom) == 0)
+        {
+            char *contents = data + meta->contents_offset + offset;
+            memcpy(buf, contents, size);
+            goclean(0);
+        }
+    }
+    goclean(-ENOENT);
+
+cleanup:
+    close(fd);
+    munmap(data, length);
+    return retval;
 }
 
 static const struct fuse_operations my_oper = {

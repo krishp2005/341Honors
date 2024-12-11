@@ -65,11 +65,14 @@ char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
         strcat(p, "/");
         *fd = open_metadata_file(HOME, p);
         free(p);
+
+        fill_directory_contents(path + 1, *fd);
     }
     else
+    {
         *fd = open_metadata_file(HOME, path);
-
-    fill_directory_contents(path + 1, *fd);
+        fill_directory_contents(path, *fd);
+    }
 
     struct stat mystbuf;
     fstat(*fd, &mystbuf);
@@ -132,13 +135,15 @@ int fill_directory_contents(const char *path, int fd)
         char **argv = (char **)calloc(11, sizeof(char *));
         char *iter = strdup(path);
         argv[0] = DIR_EXE;
-        argv[1] = iter;
-        int idx = 1;
+
+        int idx = 1 + (strlen(iter) > 0);
+        if (idx > 1)
+            argv[idx - 1] = iter;
         while (strchr(iter, '/') != NULL)
         {
             iter = strchr(iter, '/');
             *iter++ = '\0';
-            argv[++idx] = iter;
+            argv[idx++] = iter;
         }
 
         dup2(fd, STDOUT_FILENO);
@@ -146,5 +151,6 @@ int fill_directory_contents(const char *path, int fd)
         exit(1);
     }
 
+    waitpid(child, NULL, 0);
     return 0;
 }

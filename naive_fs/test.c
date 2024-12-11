@@ -62,11 +62,14 @@ char *map_metadata(const char *HOME, const char *path, size_t *length, int *fd)
         strcat(p, "/");
         *fd = open_metadata_file(HOME, p);
         free(p);
+
+        fill_directory_contents(path + 1, *fd);
     }
     else
+    {
         *fd = open_metadata_file(HOME, path);
-
-    fill_directory_contents(path + 1, *fd);
+        fill_directory_contents(path, *fd);
+    }
 
     struct stat mystbuf;
     fstat(*fd, &mystbuf);
@@ -145,6 +148,7 @@ int fill_directory_contents(const char *path, int fd)
         exit(1);
     }
 
+    waitpid(child, NULL, 0);
     return 0;
 }
 
@@ -175,10 +179,7 @@ static int my_getattr(const char *path, struct stat *stbuf)
     char *data = map_metadata(HOME, parent, &size, &fd);
 
     if (data == NULL)
-    {
-        close(fd);
         return -errno;
-    }
 
     if (strcmp(mypath, "/") == 0)
     {
@@ -228,13 +229,15 @@ static int my_readdir(const char *path)
 {
     int fd;
     size_t size;
-    char *data = map_metadata(HOME, path, &size, &fd);
+    char *mypath = normalize_path(path);
+    char *data;
+    if (strlen(mypath) == 1)
+        data = map_metadata(HOME, "", &size, &fd);
+    else
+        data = map_metadata(HOME, mypath, &size, &fd);
 
     if (data == NULL)
-    {
-        close(fd);
         return -errno;
-    }
 
     size_t num_items, item;
     memcpy(&num_items, data, sizeof(size_t));
