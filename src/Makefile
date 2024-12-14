@@ -2,18 +2,16 @@ CC = clang -std=gnu99
 WARNINGS = -Wall -Wextra -pedantic
 FUSECMD = `pkg-config fuse3 --cflags --libs` 
 CFLAGS = $(WARNINGS) $(FUSECMD) -g
-LIBS=libs/sstring.c libs/vector.c
-INCLUDES=includes
 
-EXE=naive
-SRC=naive_filesystem.c client.c
-FILESYSTEM=naive_filesystem_fs
+EXE=fs_mount
+SRC=filesystem.c
+FILESYSTEM=course_explorer_fs
 BACKING_DIR=~/.local/share/cs341_fs
 
-.PHONY: build mount unmount
+.PHONY: mount unmount clean
 
 $(EXE): $(SRC)
-	$(CC) $(CFLAGS) -I$(INCLUDES) $(LIBS) $^ -o $(EXE)
+	$(CC) $(CFLAGS) $^ -o $@
 
 mount: $(EXE) unmount
 	mkdir $(BACKING_DIR)
