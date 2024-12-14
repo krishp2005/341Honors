@@ -11,12 +11,10 @@ browsing of UIUC course information.
 # Requirements
 python3 -m pip install -r bin/requirements.txt
 
-# Pre-Build Instructions
-make install
-
-# Build Instructions
-cd naive_fs && make mount
-
-# Uninstallation
-cd naive_fs && make unmount
-make uninstall
+# Building and Running
+The makefile provides all required commands, including 
+- installation  (make install)
+- mounting      (make mount)
+- unmounting    (make unmount)
+- clean         (make clean)
+- uninstalling  (make uninstall)
