@@ -37,7 +37,7 @@
 #define ROOT "/.local/share/cs341_fs/"
 
 // the time (seconds) since the file is seen as stale
-#define EXPR_TIME (120)
+#define EXPR_TIME (300)
 
 static char *HOME = NULL;
 
