@@ -12,7 +12,7 @@ browsing of UIUC course information.
 make install
 
 # Build Instructions
-cd naive_fs && make_mount
+cd naive_fs && make mount
 
 # Uninstallation
 cd naive_fs && make unmount
