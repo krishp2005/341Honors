@@ -20,6 +20,19 @@ Ian Chen (ianchen3):
 - Designed and implemented metadata scheme allowing persistent caching
 - Wrote installation/build scripts, project documentation
 
+Krish Patwari (krishp3) :
+-Proposed the idea for the project by drawing inspiration from the Filesystem MP.
+-Suggested integrating real-time course data using the UIUC Course Explorer API to make the project more dynamic and practical.
+-Designed algorithms for metadata caching with expiration control.
+-Optimized data fetching using mmap for metadata files and ensured proper memory cleanup.
+-Handled Networking mostly.Developed robust networking calls using Python's requests library to interact with the Course Explorer API.
+-Implemented error handling for network timeouts, invalid responses, and ensured retries for failed requests.
+-Improved the efficiency of system call implementations (getattr, readdir, etc.) by reducing unnecessary I/O operations.
+-Assisted Ian with debugging system call functions and fixing edge cases in fill_directory_contents() and map_metadata().
+-Improved memory management and optimized the metadata refresh logic for fast and consistent results.
+-Wrote test cases to verify functionality, ensuring correct handling of invalid paths, stale cache data, and broken API responses.
+-Played a key role in preparing the presentation, showcasing the project architecture, challenges, and optimizations.
+
 # Dependencies
 1. libfuse [https://github.com/libfuse/libfuse]
 2. xml parser (apt install python3-lxml)
